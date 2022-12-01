@@ -1,0 +1,204 @@
+# Umma - Mainnet
+
+![ummaVERSE 34](https://user-images.githubusercontent.com/79812965/134063436-6f1bda5c-56f3-4bf3-a3a0-2b93f24217b1.png)
+
+## Syncing a node
+
+For a complete description of how to sync a node, including all upgrades, check out the [umma Documentation site](https://docs.ummanetwork.io/validators/mainnet-upgrades).
+
+
+## Original launch docs
+
+**Note these are left for historical reasons and are no longer relevant to running the chain.**
+
+_Запланированное время начала: October 1st at 15:00 UTC._
+
+**Genesis File**
+
+[Genesis File](/umma-1/genesis.json):
+
+```bash
+   curl -s  https://raw.githubusercontent.com/umma-chain/mainnet/main/umma-1/genesis.json >~/.umma/config/genesis.json
+```
+
+**Genesis sha256**
+
+```bash
+sha256sum ~/.umma/config/genesis.json
+08e023e262da93b7f787170344dbf49a125f64231934bdc1049f76a5b33c293c
+```
+
+**ummad version**
+
+```bash
+$ ummad version --long
+name: umma
+server_name: ummad
+version: HEAD-e507450f2e20aa4017e046bd24a7d8f1d3ca437a
+commit: e507450f2e20aa4017e046bd24a7d8f1d3ca437a
+```
+
+**Seed node**
+
+[Full seed nodes list](/umma-1/seeds.txt).
+
+```
+2484353dab0b2c1275765b8ffa2c50b3b36158ca@seed-node.ummachain.com:26656
+```
+
+## Setup
+
+**Prerequisites:** Убедитесь, что у вас есть [Golang >=1.18](https://golang.org/).
+
+#### Сборка из исходников
+
+Вам необходимо убедиться, что ваша конфигурация gopath верна. Если следующий шаг **'make'** не работает, возможно, вам придется добавить эти строки в ваш .profile или .zshrc в домашней папке пользователя:
+
+```bash
+export GOROOT=/usr/local/go
+export GOPATH=$HOME/go
+export GO111MODULE=on
+export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin
+```
+
+```bash
+git clone https://github.com/umma-chain/umma-core
+cd umma-core
+git checkout v0.0.1
+make build && make install
+```
+
+Это соберет и установит двоичный файл ummad в $GOBIN.
+
+Примечание. При сборке из исходного кода важно правильно установить `$GOPATH`. В случае сомнений следует сделать следующее:
+
+
+```bash
+mkdir ~/go
+export GOPATH=~/go
+```
+
+### Минимальные требования сервер
+
+- 32-64GB RAM
+- 500GB of disk space
+- 1.4 GHz amd64 CPU
+
+## Настроить узел валидатора
+
+Ниже приведены инструкции по созданию и отправке исходной транзакции.
+
+### Создать genesis транзакцию (только перед запуском)
+
+Как и в случае с Osmosis, только узлы, получившие аирдроп, смогут пройти валидацию. Другие смогут присоединиться к набору валидаторов позже.
+
+1. Инициализируйте каталоги umma и создайте локальный файл генезиса с правильными chain-id
+
+   ```bash
+   ummad init <MONIKER-NAME> --chain-id=umma-1
+   ```
+
+2. Создайте локальную пару ключей (вы должны использовать тот же ключ, который связан с вашей учетной записью раздачи)
+
+   ```bash
+   ummad keys add <key-name>
+   ```
+
+   Примечание: если вы используете автономный ключ для подписи (например, с Ledger), сделайте это с помощью `ummad keys add <KEY-NAME> --pubkey <YOUR-PUBKEY>`. Для остальных транзакций вы будете использовать флаг `--generate-only` и подписывать их в автономном режиме с помощью `ummad tx sign`.
+
+3. Загрузите файл pre-genesis :
+
+   ```bash
+   curl -s  https://raw.githubusercontent.com/umma-chain/mainnet/main/umma-1/pre-genesis.json >~/.umma/config/genesis.json
+   ```
+
+   Найдите свою учетную запись в файле umma-1/pre-genesis.json. Баланс вашего аирдропа — это то, что вы сможете использовать с вашим валидатором.
+
+4. Создайте gentx, замените `<KEY-NAME>` и `<BALANCE>`:
+
+   ```bash
+   ummad gentx <KEY-NAME> <BALANCE>aumma --chain-id=umma-1
+   ```
+
+   Если все пойдет хорошо, вы увидите сообщение, подобное следующему:
+
+   ```bash
+   Genesis transaction written to "/home/user/.umma/config/gentx/gentx-******.json"
+   ```
+
+### Отправить genesis транзакцию
+
+- Разветвите этот репозиторий в свою учетную запись Github.
+
+- Клонируйте свое репо, используя:
+
+  ```bash
+  git clone https://github.com/<YOUR-GITHUB-USERNAME>/mainnet
+  ```
+
+- Скопируйте сгенерированный файл gentx json в `<REPO-PATH>/umma-1/gentx/`
+
+  ```bash
+  cd mainnet
+  cp ~/.umma/config/gentx/gentx*.json ./umma-1/gentx/
+  ```
+
+- Commit and push to your repo
+- Create a PR (Pool request) onto https://github.com/umma-chain/mainnet
+- Будут приняты только PR (Pool request) от отдельных лиц / групп с историей успешно работающих узлов валидатора и с начальным балансом umma из стейкдропа. Это необходимо для обеспечения своевременного успешного запуска сети.
+
+#### Работа в производстве
+
+**Обратите внимание, мы проведем некоторые обновления вскоре после выхода основной сети umma. Рассмотрите возможность использования [Cosmovisor](https://docs.ummachain.com/validators/setting-up-cosmovisor), чтобы упростить себе жизнь.**
+
+Загрузите файл Genesis, когда придет время. Поместите его в папку `/home/<YOUR-USERNAME>/.umma` folder.
+
+Создайте файл systemd для вашего сервиса umma:
+
+```bash
+sudo nano /etc/systemd/system/ummad.service
+```
+
+Скопируйте и вставьте следующее и обновите `<YOUR-USERNAME>`:
+
+```bash
+Description=umma daemon
+After=network-online.target
+
+[Service]
+User=<YOUR_USERNAME>
+ExecStart=/home/<YOUR-USERNAME>/go/bin/ummad start --home /home/<YOUR-USERNAME>/.umma
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Предполагается, что `$HOME/.umma` является вашим каталогом для конфигурации и данных. Ваше фактическое расположение каталогов может отличаться.**
+
+Включите и запустите новую службу:
+
+```bash
+sudo systemctl enable ummad
+sudo systemctl start ummad
+```
+
+Check status:
+
+```bash
+ummad status
+```
+
+Check logs:
+
+```bash
+journalctl -u ummad -f
+```
+
+### Учить больше
+
+- [umma Documentation](https://docs.ummachain.com)
+- [umma Community Discord](https://discord.gg/QcWPfK4gJ2)
+- [umma Community Telegram](https://t.me/joinchat/R7QKD0ltosphNWNk)
